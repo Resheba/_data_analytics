@@ -1,4 +1,5 @@
 pandas
+openpyxl
 psycopg2
 alchemynger
 python-dotenv
