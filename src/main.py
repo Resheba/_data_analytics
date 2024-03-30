@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import (
 )
 
 from src.core import manager
-from src.database import DataORM
+from src.database import DataORM, AVGTempDayMaterializedView
 
 
 def setup_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -55,10 +55,19 @@ def setup_sql(df: pd.DataFrame) -> None:
 
 def main() -> None:
     manager.connect(create_all=False)
+    manager.engine.echo = True
+    with manager.get_session() as session:
+        session.execute(AVGTempDayMaterializedView())
+        session.commit()
+
+    print(manager(manager[AVGTempDayMaterializedView.table].select.limit(10), scalars=False))
+
+    # manager.execute(AVGDayTempMVORM())
     # df: pd.DataFrame = pd.read_excel("./data/данные.xlsx")
     # df: pd.DataFrame = setup_df(df)
     # setup_sql(df)
-    print(manager.execute(manager[DataORM].select.limit(20)))
+    # print(manager.execute(manager[DataORM].select.where(DataORM.id == 0))[0].datetime)
+    
 
 
 if __name__ == "__main__":

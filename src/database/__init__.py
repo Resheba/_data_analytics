@@ -1,1 +1,1 @@
-from .models import DataORM
+from .models import DataORM, AVGTempDayMaterializedView

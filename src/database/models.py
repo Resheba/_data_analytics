@@ -1,21 +1,18 @@
-from sqlalchemy import Column, Integer, Numeric, String, Text, TIMESTAMP, SmallInteger, Float
+from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date
+from sqlalchemy import select, cast, func
 
 from src.core import manager
 
-from .view import AVGTempMaterializedView
+from .view import MaterializedView
 
 
 class DataORM(manager.Base):
     __tablename__ = 'data'
-    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True)
 
-    def __repr__(self):
-        return f"<DataORM(id={self.id})>"
-
-    # datetime = Column(TIMESTAMP(timezone=True))
-    # T = Column(Numeric)
+    datetime = Column(TIMESTAMP(timezone=True), primary_key=True)
+    T = Column(Numeric)
     # Po = Column(Numeric)
     # P = Column(Numeric)
     # Pa = Column(Numeric)
@@ -43,3 +40,17 @@ class DataORM(manager.Base):
     # Tg = Column(Float)
     # E_ = Column("E'", Text)
     # sss = Column(Text)
+
+    def __repr__(self) -> str:
+        return f"<DataORM(id={self.id})>"
+
+
+class AVGTempDayMaterializedView(MaterializedView):
+    name: str = 'avg_temp_day'
+    selectable: Select = (select(cast(DataORM.datetime, Date).label('date'), func.ROUND(func.AVG(DataORM.T), 2).label('avg_temp')).
+                          group_by('date').
+                          order_by('date')
+                          )
+
+
+# class AVGTempMonth
