@@ -1,18 +1,20 @@
-import os, sys
+import os, sys, logging
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
+logging.basicConfig(level=logging.INFO)
 
-import logging
 import pandas as pd
-
+from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import (
     VARCHAR, 
     TIMESTAMP, 
     NUMERIC, 
     SMALLINT,
+    INTEGER,
 )
 
-from src.database import manager
+from src.core import manager
+from src.database import DataORM
 
 
 def setup_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -29,7 +31,7 @@ def setup_df(df: pd.DataFrame) -> pd.DataFrame:
 
 def setup_sql(df: pd.DataFrame) -> None:
     df.to_sql(
-        name="subline", 
+        name=DataORM.__tablename__, 
         con=manager.engine, 
         if_exists="replace", 
         dtype={
@@ -44,19 +46,19 @@ def setup_sql(df: pd.DataFrame) -> None:
             df.columns[8]: SMALLINT,
             df.columns[9]: SMALLINT,
             df.columns[10]: VARCHAR,
-
             },
         
-        index=False
+        index=True,
+        index_label="id",
             )
 
 
 def main() -> None:
     manager.connect(create_all=False)
-    # df: pd.DataFrame = pd.read_excel("./data/данные.xlsx", parse_dates=True)
+    # df: pd.DataFrame = pd.read_excel("./data/данные.xlsx")
     # df: pd.DataFrame = setup_df(df)
-    # print(df.dtypes)
     # setup_sql(df)
+    print(manager.execute(manager[DataORM].select.limit(20)))
 
 
 if __name__ == "__main__":
