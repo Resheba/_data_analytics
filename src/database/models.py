@@ -3,7 +3,7 @@ from sqlalchemy import select, cast, func
 
 from src.core import manager
 
-from .view import MaterializedView
+from ._view import MaterializedView
 
 
 class DataORM(manager.Base):
@@ -46,6 +46,12 @@ class DataORM(manager.Base):
 
 
 class AVGTempDayMaterializedView(MaterializedView):
+    '''
+    SELECT datetime::DATE as date, ROUND(AVG("T"), 2) as avg_temp
+    FROM data
+    GROUP BY date
+    ORDER BY date
+    '''
     name: str = 'avg_temp_day'
     selectable: Select = (select(cast(DataORM.datetime, Date).label('date'), func.ROUND(func.AVG(DataORM.T), 2).label('avg_temp')).
                           group_by('date').
@@ -53,4 +59,15 @@ class AVGTempDayMaterializedView(MaterializedView):
                           )
 
 
-# class AVGTempMonth
+class AVGTempMonthMaterializedView(MaterializedView):
+    '''
+    SELECT TO_CHAR(datetime, 'YYYY-MM') as date, AVG(data."T") 
+    FROM data
+    GROUP BY date
+    ORDER BY date
+    '''
+    name: str = 'avg_temp_month'
+    selectable: Select = (select(func.TO_CHAR(DataORM.datetime, 'YYYY-MM').label('date'), func.ROUND(func.AVG(DataORM.T), 2).label('avg_temp')).
+                          group_by('date').
+                          order_by('date')
+                          )

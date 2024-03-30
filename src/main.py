@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import (
 )
 
 from src.core import manager
-from src.database import DataORM, AVGTempDayMaterializedView
+from src.database import DataORM, AVGTempDayMaterializedView, AVGTempMonthMaterializedView
 
 
 def setup_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -58,9 +58,11 @@ def main() -> None:
     manager.engine.echo = True
     with manager.get_session() as session:
         session.execute(AVGTempDayMaterializedView())
+        session.execute(AVGTempMonthMaterializedView())
         session.commit()
 
-    print(manager(manager[AVGTempDayMaterializedView.table].select.limit(10), scalars=False))
+    # print(manager(manager[AVGTempDayMaterializedView.table].select.limit(10), scalars=False))
+    print(manager(manager[AVGTempMonthMaterializedView.table].select.limit(10), scalars=False))
 
     # manager.execute(AVGDayTempMVORM())
     # df: pd.DataFrame = pd.read_excel("./data/данные.xlsx")
