@@ -14,15 +14,14 @@ from sqlalchemy.dialects.postgresql import (
 
 from src.database import manager
 
+
 def setup_df(df: pd.DataFrame) -> pd.DataFrame:
-    df[df.columns[0]] = df[df.columns[0]].astype(str) + 'T' + df[df.columns[1]].astype(str) + 'Z'
+    df[df.columns[0]] = df[df.columns[0]].astype(str) + ' ' + df[df.columns[1]].astype(str) + 'Z+03:00'
     del df[df.columns[1]]
+    df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
     df.rename(
         columns={
             df.columns[0]: "datetime",
-            df.columns[1]: "temperature",
-            df.columns[6]: 'windiness',
-            df.columns[10]: "cloud_cover"
             }, 
             inplace=True)
     return df
@@ -54,9 +53,10 @@ def setup_sql(df: pd.DataFrame) -> None:
 
 def main() -> None:
     manager.connect(create_all=False)
-    df: pd.DataFrame = pd.read_excel("./data/данные.xlsx", parse_dates=True)
-    df: pd.DataFrame = setup_df(df)
-    setup_sql(df)
+    # df: pd.DataFrame = pd.read_excel("./data/данные.xlsx", parse_dates=True)
+    # df: pd.DataFrame = setup_df(df)
+    # print(df.dtypes)
+    # setup_sql(df)
 
 
 if __name__ == "__main__":
