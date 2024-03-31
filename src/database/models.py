@@ -93,7 +93,11 @@ class SnowDayCoverMaterializedView(MaterializedView):
     '''
     SELECT 
         datetime::DATE AS date, 
-        SUM(CASE WHEN "sss" ~ '^[0-9]+$' THEN "sss"::INT ELSE 0 END) AS snow_cover
+        SUM(CASE 
+			WHEN "sss" ~ '^[0-9]+$' THEN "sss"::INT 
+			WHEN "sss" IN ('Менее 0.5', 'Снежный покров не постоянный.') THEN 0.1
+			ELSE 0 END
+		   ) AS snow_cover
     FROM 
         data
     GROUP BY 
@@ -108,9 +112,11 @@ class SnowDayCoverMaterializedView(MaterializedView):
             case(
                 (DataORM.sss.op('~')('^[0-9]+$') == True,
                     cast(DataORM.sss, Integer)),
+                (DataORM.sss.in_(('Менее 0.5', 'Снежный покров не постоянный.')),
+                    0.1),
                 else_=0
-            ).label('snow_cover')
-        )
+            )
+        ).label('snow_cover')
         ).
         group_by('date').
         order_by('date'))

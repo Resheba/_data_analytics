@@ -4,7 +4,7 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 logging.basicConfig(level=logging.INFO)
 
 import pandas as pd
-from sqlalchemy import inspect
+from sqlalchemy import inspect, func, select
 
 from src.core import manager, setup_sql, setup_df
 from config import Settings
@@ -32,11 +32,22 @@ def main() -> None:
         session.commit()
         logging.info('Materialized views refreshed')
 
-    logging.info('Get first 5 rows from materialized views')
-    print(manager(manager[AVGTempDayMaterializedView.table].select.limit(5), scalars=False))
-    print(manager(manager[AVGTempMonthMaterializedView.table].select.limit(5), scalars=False))
-    print(manager(manager[SnowDayCoverMaterializedView.table].select.limit(5), scalars=False))
-    logging.info('Data printed')
+    logging.info('\n\n\tResults:\n')
+    print(
+        manager(
+            manager[AVGTempDayMaterializedView.table].select.limit(5), scalars=False
+        )
+    )
+    print(
+        manager(
+            manager[AVGTempMonthMaterializedView.table].select.limit(5), scalars=False
+        )
+    )
+    print(
+        manager(
+            select(func.count()).where(SnowDayCoverMaterializedView.table.c.snow_cover == 0)
+        )
+    )
     
 
 if __name__ == "__main__":
