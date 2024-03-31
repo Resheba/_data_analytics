@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date, case
-from sqlalchemy import select, cast, func, distinct, CTE, and_, or_, union
+from sqlalchemy import select, cast, func, distinct, CTE, and_, or_, union, true, Lateral, FromClause
 from sqlalchemy.orm import aliased
 
 from src.core import manager
@@ -106,7 +106,7 @@ class SnowDayCoverView(View):
     ORDER BY 
         date
     '''
-    name: str = 'snow_cover_mv'
+    name: str = 'snow_cover_day'
     selectable: Select = (select(
         cast(DataORM.datetime, Date).label('date'),
         func.sum(
@@ -128,7 +128,7 @@ class SnowDayProYearView(View):
     SELECT 
         EXTRACT(YEAR from date)::INT as year, count(snow_cover) 
     FROM 
-        snow_cover_mv
+        snow_cover_day
     WHERE 
         snow_cover != 0
     GROUP BY 
@@ -150,10 +150,10 @@ class MaxSnowCoverSeason1MaterializedView(MaterializedView):
     '''
     with seasons as (
         SELECT DISTINCT EXTRACT(YEAR FROM date) - 1 as year_a, EXTRACT(YEAR FROM date) as year_b
-        FROM snow_cover_mv
+        FROM snow_cover_day
 		UNION
         SELECT DISTINCT EXTRACT(YEAR FROM date) as year_a, EXTRACT(YEAR FROM date) + 1 as year_b
-        FROM snow_cover_mv
+        FROM snow_cover_day
         ORDER BY 
         year_a
     )
@@ -163,7 +163,7 @@ class MaxSnowCoverSeason1MaterializedView(MaterializedView):
         MAX(snow_cover) 
     FROM 
         seasons, 
-        snow_cover_mv
+        snow_cover_day
     WHERE
         EXTRACT(MONTH FROM date) >= 7 AND EXTRACT(YEAR FROM date) = year_a
         OR
@@ -216,7 +216,7 @@ class MaxSnowCoverSeason2MaterializedView(MaterializedView):
         AS season_start_year,
         MAX(snow_cover)
     FROM
-        snow_cover_mv
+        snow_cover_day
     GROUP BY season_start_year
     ORDER BY season_start_year
     '''
@@ -238,10 +238,10 @@ class DaysWithSnowCoverSeasonMaterializedView(MaterializedView):
     '''    
     with seasons as (
         SELECT DISTINCT EXTRACT(YEAR FROM date) - 1 as year_a, EXTRACT(YEAR FROM date) as year_b
-        FROM snow_cover_mv
+        FROM snow_cover_day
 		UNION
         SELECT DISTINCT EXTRACT(YEAR FROM date) as year_a, EXTRACT(YEAR FROM date) + 1 as year_b
-        FROM snow_cover_mv
+        FROM snow_cover_day
         ORDER BY 
         year_a
     )
@@ -251,7 +251,7 @@ class DaysWithSnowCoverSeasonMaterializedView(MaterializedView):
         COUNT(snow_cover) 
     FROM 
         seasons, 
-        snow_cover_mv
+        snow_cover_day
     WHERE
         (EXTRACT(MONTH FROM date) >= 7 AND EXTRACT(YEAR FROM date) = year_a
         	OR
@@ -296,4 +296,77 @@ class DaysWithSnowCoverSeasonMaterializedView(MaterializedView):
             group_by('season').
             order_by('season')
             )
-    
+
+
+class SnowFallLJMaterializedView(MaterializedView):
+    '''
+    with maxer as (SELECT
+        CASE 
+            WHEN EXTRACT(MONTH FROM date) >= 7 
+                THEN EXTRACT(YEAR FROM date)::INT
+            ELSE 
+                EXTRACT(YEAR FROM date)::INT -1
+        END 
+        AS season_start_year,
+        MAX(snow_cover) as mcmax
+    FROM
+        snow_cover_day
+    GROUP BY season_start_year)
+
+    SELECT 
+        season_start_year, date, snow_cover
+    FROM 
+        maxer
+    JOIN LATERAL
+        (
+            SELECT * FROM snow_cover_day
+            WHERE 
+                snow_cover = maxer.mcmax
+                AND
+                date 
+                    BETWEEN 
+                (season_start_year||'-07-01')::DATE 
+                    AND 
+                (season_start_year + 1||'-07-01')::DATE
+            ORDER BY date DESC
+            LIMIT 1
+        ) as s
+    ON TRUE
+    ORDER BY season_start_year;
+    '''
+    name: str = 'snow_melt'
+    _snow_covers_aliased: FromClause = aliased(SnowDayCoverView.table)
+    _cte: CTE = (select(
+            case(
+                (func.extract('month', _snow_covers_aliased.c.date) >= 7,
+                func.extract('year', _snow_covers_aliased.c.date)),
+                else_=func.extract('year', _snow_covers_aliased.c.date).op('-')(1)
+            ).label('season_start_year'),
+            func.max(_snow_covers_aliased.c.snow_cover).label('mcmax')
+        ).
+        select_from(_snow_covers_aliased).
+        group_by('season_start_year')
+    ).cte('maxer')
+    _lateral: Lateral = (select(
+            _snow_covers_aliased.c.date, _snow_covers_aliased.c.snow_cover
+        ).
+        where(
+            and_(
+                _snow_covers_aliased.c.snow_cover == _cte.c.mcmax,
+                _snow_covers_aliased.c.date.between(
+                    (_cte.c.season_start_year.cast(Text) + '-07-01').cast(Date),
+                    ((_cte.c.season_start_year.op('+')(1)).cast(Text) + '-07-01').cast(Date)
+                )
+            )
+        ).
+        select_from(_snow_covers_aliased).
+        order_by(_snow_covers_aliased.c.date.desc()).
+        limit(1)
+    ).lateral()
+    selectable: Select = (select(
+            _cte.c.season_start_year, _lateral.c.date, _lateral.c.snow_cover
+        ).
+        select_from(_cte).
+        join(_lateral, true()).
+        order_by(_cte.c.season_start_year)
+    )
