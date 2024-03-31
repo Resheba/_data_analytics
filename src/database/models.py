@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date
+from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date, case
 from sqlalchemy import select, cast, func
 
 from src.core import manager
@@ -39,7 +39,7 @@ class DataORM(manager.Base):
     # E = Column(Text)
     # Tg = Column(Float)
     # E_ = Column("E'", Text)
-    # sss = Column(Text)
+    sss = Column(Text)
 
     def __repr__(self) -> str:
         return f"<DataORM(id={self.id})>"
@@ -47,27 +47,70 @@ class DataORM(manager.Base):
 
 class AVGTempDayMaterializedView(MaterializedView):
     '''
-    SELECT datetime::DATE as date, ROUND(AVG("T"), 2) as avg_temp
-    FROM data
-    GROUP BY date
-    ORDER BY date
+    SELECT 
+        datetime::DATE as date, ROUND(AVG("T"), 2) as avg_temp
+    FROM 
+        data
+    GROUP BY 
+        date
+    ORDER BY 
+        date
     '''
     name: str = 'avg_temp_day'
-    selectable: Select = (select(cast(DataORM.datetime, Date).label('date'), func.ROUND(func.AVG(DataORM.T), 2).label('avg_temp')).
-                          group_by('date').
-                          order_by('date')
-                          )
+    selectable = (
+        select(
+            cast(DataORM.datetime, Date).label('date'),
+            func.ROUND(func.AVG(DataORM.T), 2).label('avg_temp')
+        ).
+        group_by('date').
+        order_by('date')
+    )
 
 
 class AVGTempMonthMaterializedView(MaterializedView):
     '''
-    SELECT TO_CHAR(datetime, 'YYYY-MM') as date, AVG(data."T") 
-    FROM data
-    GROUP BY date
-    ORDER BY date
+    SELECT 
+        TO_CHAR(datetime, 'YYYY-MM') as date, AVG(data."T") 
+    FROM 
+        data
+    GROUP BY 
+        date
+    ORDER BY 
+        date
     '''
     name: str = 'avg_temp_month'
-    selectable: Select = (select(func.TO_CHAR(DataORM.datetime, 'YYYY-MM').label('date'), func.ROUND(func.AVG(DataORM.T), 2).label('avg_temp')).
-                          group_by('date').
-                          order_by('date')
-                          )
+    selectable: Select = (select(
+        func.TO_CHAR(DataORM.datetime, 'YYYY-MM').label('date'), 
+        func.ROUND(
+            func.AVG(DataORM.T), 2
+            ).label('avg_temp')
+            ).
+        group_by('date').
+        order_by('date'))
+
+
+class SnowDayCoverMaterializedView(MaterializedView):
+    '''
+    SELECT 
+        datetime::DATE AS date, 
+        SUM(CASE WHEN "sss" ~ '^[0-9]+$' THEN "sss"::INT ELSE 0 END) AS snow_cover
+    FROM 
+        data
+    GROUP BY 
+        date
+    ORDER BY 
+        date;
+    '''
+    name: str = 'snow_cover_mv'
+    selectable: Select = (select(
+        cast(DataORM.datetime, Date).label('date'),
+        func.sum(
+            case(
+                (DataORM.sss.op('~')('^[0-9]+$') == True,
+                    cast(DataORM.sss, Integer)),
+                else_=0
+            ).label('snow_cover')
+        )
+        ).
+        group_by('date').
+        order_by('date'))
