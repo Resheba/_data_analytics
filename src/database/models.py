@@ -43,10 +43,10 @@ class DataORM(manager.Base):
     sss = Column(Text)
 
     def __repr__(self) -> str:
-        return f"<DataORM(id={self.id})>"
+        return f"<DataORM({self.datetime})>"
 
 
-class AVGTempDayMaterializedView(MaterializedView):
+class AVGTempDayView(View):
     '''
     SELECT 
         datetime::DATE as date, ROUND(AVG("T"), 2) as avg_temp
@@ -90,7 +90,7 @@ class AVGTempMonthView(View):
         order_by('date'))
 
 
-class SnowDayCoverMaterializedView(MaterializedView):
+class SnowDayCoverView(View):
     '''
     SELECT 
         datetime::DATE AS date, 
@@ -137,7 +137,7 @@ class SnowDayProYearView(View):
         year
     '''
     name: str = 'snow_pro_year'
-    _snow_days_aliased = aliased(SnowDayCoverMaterializedView.table)
+    _snow_days_aliased = aliased(SnowDayCoverView.table)
     selectable: Select = (select(
         func.EXTRACT('year', _snow_days_aliased.c.date).cast(Integer).label('years'),
         func.count(_snow_days_aliased.c.snow_cover).label('snow_days')).
@@ -146,7 +146,7 @@ class SnowDayProYearView(View):
         order_by('years'))
 
 
-class MaxSnowCoverSeason1View(View):
+class MaxSnowCoverSeason1MaterializedView(MaterializedView):
     '''
     with seasons as (
         SELECT DISTINCT EXTRACT(YEAR FROM date) - 1 as year_a, EXTRACT(YEAR FROM date) as year_b
@@ -174,7 +174,7 @@ class MaxSnowCoverSeason1View(View):
         season
     '''
     name: str = 'max_snow_cover_season_cte'
-    _snow_covers_aliased = aliased(SnowDayCoverMaterializedView.table)
+    _snow_covers_aliased = aliased(SnowDayCoverView.table)
     _cte: CTE = (union(
                     select(
                         distinct(func.extract('year', _snow_covers_aliased.c.date).op('-')(1)).label('year_a'), 
@@ -204,7 +204,7 @@ class MaxSnowCoverSeason1View(View):
             )
 
 
-class MaxSnowCoverSeason2View(View):
+class MaxSnowCoverSeason2MaterializedView(MaterializedView):
     '''
     SELECT
         CASE 
@@ -221,7 +221,7 @@ class MaxSnowCoverSeason2View(View):
     ORDER BY season_start_year
     '''
     name: str = 'max_snow_cover_season_case'
-    _snow_covers_aliased = aliased(SnowDayCoverMaterializedView.table)
+    _snow_covers_aliased = aliased(SnowDayCoverView.table)
     selectable: Select = (select(
         case(
             (func.extract('month', _snow_covers_aliased.c.date) >= 7,
@@ -234,7 +234,7 @@ class MaxSnowCoverSeason2View(View):
         )
 
 
-class DaysWithSnowCoverSeasonView(View):
+class DaysWithSnowCoverSeasonMaterializedView(MaterializedView):
     '''    
     with seasons as (
         SELECT DISTINCT EXTRACT(YEAR FROM date) - 1 as year_a, EXTRACT(YEAR FROM date) as year_b
@@ -265,7 +265,7 @@ class DaysWithSnowCoverSeasonView(View):
         season
     '''
     name: str = 'days_with_snow_season'
-    _snow_covers_aliased = aliased(SnowDayCoverMaterializedView.table)
+    _snow_covers_aliased = aliased(SnowDayCoverView.table)
     _cte: CTE = (union(
                     select(
                         distinct(func.extract('year', _snow_covers_aliased.c.date).op('-')(1)).label('year_a'), 

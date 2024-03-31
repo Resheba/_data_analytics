@@ -10,13 +10,13 @@ from config import Settings
 from src.core import manager, setup_sql, setup_df, logger
 from src.database import (
         DataORM, 
-        AVGTempDayMaterializedView, 
+        AVGTempDayView, 
         AVGTempMonthView, 
-        SnowDayCoverMaterializedView, 
+        SnowDayCoverView, 
         SnowDayProYearView, 
-        MaxSnowCoverSeason1View, 
-        MaxSnowCoverSeason2View,
-        DaysWithSnowCoverSeasonView,
+        MaxSnowCoverSeason1MaterializedView, 
+        MaxSnowCoverSeason2MaterializedView,
+        DaysWithSnowCoverSeasonMaterializedView,
     )
 
 
@@ -37,13 +37,13 @@ def main() -> None:
 
     with manager.get_session() as session:
         logger.info('Refresh views')
-        session.execute(AVGTempDayMaterializedView())
+        session.execute(AVGTempDayView())
         session.execute(AVGTempMonthView())
-        session.execute(SnowDayCoverMaterializedView())
+        session.execute(SnowDayCoverView())
         session.execute(SnowDayProYearView())
-        session.execute(MaxSnowCoverSeason1View())
-        session.execute(MaxSnowCoverSeason2View())
-        session.execute(DaysWithSnowCoverSeasonView())
+        session.execute(MaxSnowCoverSeason1MaterializedView())
+        session.execute(MaxSnowCoverSeason2MaterializedView())
+        session.execute(DaysWithSnowCoverSeasonMaterializedView())
         session.commit()
         logger.info('Views refreshed')
 
@@ -52,7 +52,7 @@ def main() -> None:
     logger.info('AVG Temperature by day')
     logger.info('\n' + pformat(
         manager(
-            manager[AVGTempDayMaterializedView.table].select.limit(5), scalars=False
+            manager[AVGTempDayView.table].select.limit(5), scalars=False
         )
     ))
     logger.info('AVG Temperature by month')
@@ -64,7 +64,7 @@ def main() -> None:
     logger.info('Days with snow cover')
     logger.info('\n' + pformat(
         manager(
-            select(func.count()).where(SnowDayCoverMaterializedView.table.c.snow_cover != 0)
+            select(func.count()).where(SnowDayCoverView.table.c.snow_cover != 0)
         )
     ))
     logger.info('Snow cover by years')
@@ -76,13 +76,13 @@ def main() -> None:
     logger.info('Max snow cover by seasons')
     logger.info('\n' + pformat(
         manager(
-            manager[MaxSnowCoverSeason2View.table].select, scalars=False
+            manager[MaxSnowCoverSeason2MaterializedView.table].select, scalars=False
         )
     ))
     logger.info('Days with snow cover by seasons')
     logger.info('\n' + pformat(
         manager(
-            manager[DaysWithSnowCoverSeasonView.table].select, scalars=False
+            manager[DaysWithSnowCoverSeasonMaterializedView.table].select, scalars=False
         )
     ))
     
