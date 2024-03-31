@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date, case
 from sqlalchemy import select, cast, func
+from sqlalchemy.orm import aliased
 
 from src.core import manager
 
@@ -103,7 +104,7 @@ class SnowDayCoverMaterializedView(MaterializedView):
     GROUP BY 
         date
     ORDER BY 
-        date;
+        date
     '''
     name: str = 'snow_cover_mv'
     selectable: Select = (select(
@@ -122,8 +123,25 @@ class SnowDayCoverMaterializedView(MaterializedView):
         order_by('date'))
 
 
-class SnowProYearView(View):
+class SnowDayProYearView(View):
     '''
-
+    SELECT 
+        EXTRACT(YEAR from date)::INT as year, count(snow_cover) 
+    FROM 
+        snow_cover_mv
+    WHERE 
+        snow_cover != 0
+    GROUP BY 
+        year
+    ORDER BY 
+        year
     '''
-    pass
+    name: str = 'snow_pro_year'
+    _snow_days_aliased = aliased(SnowDayCoverMaterializedView.table)
+    selectable: Select = (select(
+        func.EXTRACT('year', _snow_days_aliased.c.date).label('years'),
+        func.count(_snow_days_aliased.c.snow_cover).label('snow_days')).
+        where(_snow_days_aliased.c.snow_cover != 0).
+        group_by('years').
+        order_by('years'))
+    

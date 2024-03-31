@@ -8,6 +8,7 @@ load_dotenv(override=True)
 class Settings:
     DB_DSN: Final[str] = os.getenv("DB_DSN")
     DATA_PATH: Final[str] = os.getenv("DATA_PATH")
+    LOG_PATH: Final[str] = os.getenv("LOG_PATH", 'log.log')
 
 
 if not all(value for key, value in Settings.__dict__.items() if not key.startswith("__")):
