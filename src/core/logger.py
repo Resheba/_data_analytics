@@ -11,6 +11,7 @@ _console_handler = logging.StreamHandler()
 _console_handler.setLevel(logging.INFO)
 
 _file_handler = logging.FileHandler(Settings.LOG_PATH)
+_file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 _file_handler.setLevel(logging.INFO)
 
 logger.addHandler(_console_handler)

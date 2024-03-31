@@ -139,7 +139,7 @@ class SnowDayProYearView(View):
     name: str = 'snow_pro_year'
     _snow_days_aliased = aliased(SnowDayCoverMaterializedView.table)
     selectable: Select = (select(
-        func.EXTRACT('year', _snow_days_aliased.c.date).label('years'),
+        func.EXTRACT('year', _snow_days_aliased.c.date).cast(Integer).label('years'),
         func.count(_snow_days_aliased.c.snow_cover).label('snow_days')).
         where(_snow_days_aliased.c.snow_cover != 0).
         group_by('years').

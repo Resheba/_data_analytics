@@ -3,8 +3,8 @@ import os, sys
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 import pandas as pd
+from pprint import pformat
 from sqlalchemy import inspect, func, select
-from pprint import pprint, pformat
 
 from config import Settings
 from src.core import manager, setup_sql, setup_df, logger
@@ -36,25 +36,25 @@ def main() -> None:
     logger.info('\n\n\tResults:\n')
 
     logger.info('AVG Temperature by day')
-    logger.info(pformat(
+    logger.info('\n' + pformat(
         manager(
             manager[AVGTempDayMaterializedView.table].select.limit(5), scalars=False
         )
     ))
     logger.info('AVG Temperature by month')
-    logger.info(pformat(
+    logger.info('\n' + pformat(
         manager(
             manager[AVGTempMonthView.table].select.limit(5), scalars=False
         )
     ))
     logger.info('Days with snow cover')
-    logger.info(pformat(
+    logger.info('\n' + pformat(
         manager(
             select(func.count()).where(SnowDayCoverMaterializedView.table.c.snow_cover != 0)
         )
     ))
     logger.info('Snow cover by years')
-    logger.info(pformat(
+    logger.info('\n' + pformat(
         manager(
             manager[SnowDayProYearView.table].select, scalars=False
         )
@@ -63,3 +63,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    logger.info('Exit')
