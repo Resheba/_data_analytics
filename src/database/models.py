@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date, case
-from sqlalchemy import select, cast, func
+from sqlalchemy import select, cast, func, distinct, CTE, and_, or_
 from sqlalchemy.orm import aliased
 
 from src.core import manager
@@ -144,4 +144,51 @@ class SnowDayProYearView(View):
         where(_snow_days_aliased.c.snow_cover != 0).
         group_by('years').
         order_by('years'))
-    
+
+
+class MaxSnowCoverSeason_1_View(View):
+    '''
+    with seasons as (
+        SELECT DISTINCT EXTRACT(YEAR FROM date) as year_a, EXTRACT(YEAR FROM date) + 1 as year_b
+        FROM snow_cover_mv
+        ORDER BY 
+        year_a
+    )
+
+    SELECT 
+        FORMAT('%s/%s', year_a, year_b) as season, 
+        MAX(snow_cover) 
+    FROM 
+        seasons, 
+        snow_cover_mv
+    WHERE
+        EXTRACT(MONTH FROM date) >= 7 AND EXTRACT(YEAR FROM date) = year_a
+        OR
+        EXTRACT(MONTH FROM date) < 7 AND EXTRACT(YEAR FROM date) = year_b
+    GROUP BY
+        season
+    ORDER BY
+        season
+    '''
+    name: str = 'max_snow_cover_season'
+    _snow_covers_aliased = aliased(SnowDayCoverMaterializedView.table)
+    _cte: CTE = (select(
+                    distinct(func.extract('year', _snow_covers_aliased.c.date)).label('year_a'), 
+                    func.extract('year', _snow_covers_aliased.c.date).op('+')(1).label('year_b'),
+                )
+                .select_from(_snow_covers_aliased).
+                order_by('year_a')
+            ).cte('seasons')
+    selectable: Select = (select(
+            func.format('%s/%s', _cte.c.year_a, _cte.c.year_b).label('season'),
+            func.max(_snow_covers_aliased.c.snow_cover).label('max_snow_cover')).
+            select_from(_cte, _snow_covers_aliased).
+            where(
+                or_(
+                    and_(func.extract('month', _snow_covers_aliased.c.date) >= 7, func.extract('year' , _snow_covers_aliased.c.date) == _cte.c.year_a),
+                    and_(func.extract('month', _snow_covers_aliased.c.date) < 7, func.extract('year', _snow_covers_aliased.c.date) == _cte.c.year_b)
+                    )
+                ).
+            group_by('season').
+            order_by('season')
+            )
