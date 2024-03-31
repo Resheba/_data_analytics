@@ -334,7 +334,7 @@ class SnowFallLJMaterializedView(MaterializedView):
     ON TRUE
     ORDER BY season_start_year;
     '''
-    name: str = 'snow_melt'
+    name: str = 'snow_melt_lateral_join'
     _snow_covers_aliased: FromClause = aliased(SnowDayCoverView.table)
     _cte: CTE = (select(
             case(
@@ -370,3 +370,77 @@ class SnowFallLJMaterializedView(MaterializedView):
         join(_lateral, true()).
         order_by(_cte.c.season_start_year)
     )
+
+
+class SnowFallWFView(View):
+    '''
+    with maxer as (SELECT
+        CASE 
+            WHEN EXTRACT(MONTH FROM date) >= 7 
+                THEN EXTRACT(YEAR FROM date)::INT
+            ELSE 
+                EXTRACT(YEAR FROM date)::INT -1
+        END 
+        AS season_start_year,
+        MAX(snow_cover) as mcmax
+    FROM
+        snow_cover_day
+    GROUP BY season_start_year)
+
+
+    SELECT 	season_start_year, date, mcmax FROM 
+    (SELECT 
+        season_start_year, 
+        date, 
+        mcmax,
+        ROW_NUMBER() OVER (PARTITION BY season_start_year ORDER BY date DESC) as ron
+    FROM 
+        maxer, snow_cover_day
+    WHERE
+        snow_cover = mcmax
+        AND
+        date BETWEEN
+            (season_start_year||'-07-01')::DATE
+            AND
+            (season_start_year + 1||'-07-01')::DATE
+
+    ) as wf
+    WHERE 
+        ron = 1
+    ;
+    '''
+    name: str = 'snow_melt_window_function'
+    _snow_covers_aliased: FromClause = aliased(SnowDayCoverView.table)
+    _cte: CTE = (select(
+            case(
+                (func.extract('month', _snow_covers_aliased.c.date) >= 7,
+                func.extract('year', _snow_covers_aliased.c.date)),
+                else_=func.extract('year', _snow_covers_aliased.c.date).op('-')(1)
+            ).label('season_start_year'),
+            func.max(_snow_covers_aliased.c.snow_cover).label('mcmax')
+        ).
+        select_from(_snow_covers_aliased).
+        group_by('season_start_year')
+    ).cte('maxer')
+    _sub_query: Select = (select(
+            _cte.c.season_start_year, _snow_covers_aliased.c.date, _cte.c.mcmax, func.row_number().over(
+                partition_by=_cte.c.season_start_year,
+                order_by=_snow_covers_aliased.c.date.desc()
+            ).label('ron')).
+            select_from(_cte, _snow_covers_aliased).
+            where(
+                and_(
+                    _snow_covers_aliased.c.snow_cover == _cte.c.mcmax,
+                    _snow_covers_aliased.c.date.between(
+                        (_cte.c.season_start_year.cast(Text) + '-07-01').cast(Date),
+                        ((_cte.c.season_start_year.op('+')(1)).cast(Text) + '-07-01').cast(Date)
+                    )
+                )
+            ).subquery('wf')
+            )
+    selectable: Select = (select(
+            _sub_query.c.season_start_year, _sub_query.c.date, _sub_query.c.mcmax).
+            select_from(_sub_query).
+            where(_sub_query.c.ron == 1)
+            )
+    

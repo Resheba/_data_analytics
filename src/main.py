@@ -18,6 +18,7 @@ from src.database import (
         MaxSnowCoverSeason2MaterializedView,
         DaysWithSnowCoverSeasonMaterializedView,
         SnowFallLJMaterializedView,
+        SnowFallWFView
     )
 
 
@@ -46,6 +47,7 @@ def main() -> None:
         session.execute(MaxSnowCoverSeason2MaterializedView())
         session.execute(DaysWithSnowCoverSeasonMaterializedView())
         session.execute(SnowFallLJMaterializedView())
+        session.execute(SnowFallWFView())
         session.commit()
         logger.info('Views refreshed')
 
@@ -87,10 +89,16 @@ def main() -> None:
             manager[DaysWithSnowCoverSeasonMaterializedView.table].select, scalars=False
         )
     ))
-    logger.info('Snow fall')
+    logger.info('Snow melt J')
     logger.info('\n' + pformat(
         manager(
             manager[SnowFallLJMaterializedView.table].select, scalars=False
+        )
+    ))
+    logger.info('Snow melt WF')
+    logger.info('\n' + pformat(
+        manager(
+            manager[SnowFallWFView.table].select, scalars=False
         )
     ))
     

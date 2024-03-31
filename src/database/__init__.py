@@ -8,4 +8,5 @@ from .models import (
     MaxSnowCoverSeason2MaterializedView,
     DaysWithSnowCoverSeasonMaterializedView,
     SnowFallLJMaterializedView,
+    SnowFallWFView,
 )
