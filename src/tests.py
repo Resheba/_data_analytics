@@ -101,7 +101,7 @@ class TestQueries:
 
     @classmethod
     def test_max_snow_cover_season_2(cls, manager: SyncManager):
-        logger.info('Максимальный покров снега по сезонам V2')
+        logger.info('Максимальная высота покрова снега по сезонам V2')
         logger.info('\n' + pformat(
             manager(
                 manager[MaxSnowCoverSeason2MaterializedView.table].select, scalars=False
@@ -110,7 +110,7 @@ class TestQueries:
 
     @classmethod
     def test_max_snow_cover_season_1(cls, manager: SyncManager):
-        logger.info('Максимальный покров снега по сезонам V1')
+        logger.info('Максимальная высота покрова снега по сезонам V1')
         logger.info('\n' + pformat(
             manager(
                 manager[MaxSnowCoverSeason1MaterializedView.table].select, scalars=False
@@ -119,7 +119,7 @@ class TestQueries:
 
     @classmethod
     def test_days_with_snow_cover_season(cls, manager: SyncManager):
-        logger.info('Количество дней со снежным покровом в seizoны')
+        logger.info('Количество дней со снежным покровом в сезоны')
         logger.info('\n' + pformat(
             manager(
                 manager[DaysWithSnowCoverSeasonMaterializedView.table].select, scalars=False
