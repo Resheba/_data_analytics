@@ -26,7 +26,6 @@ class MaterializedView(DDLElement):
         )
         return t
     
-
     @classmethod
     def refresh(cls, session: Session) -> None:
         session.execute(text('REFRESH MATERIALIZED VIEW %s;' % (
@@ -35,8 +34,30 @@ class MaterializedView(DDLElement):
 
 
 @compiler.compiles(MaterializedView)
-def _create_view_compiler(element: MaterializedView, compiler: PGDDLCompiler, **kwargs) -> str:
+def _create_m_view_compiler(element: MaterializedView, compiler: PGDDLCompiler, **kwargs) -> str:
     return "CREATE MATERIALIZED VIEW IF NOT EXISTS %s AS %s;" % (
+        element.name,
+        compiler.sql_compiler.process(element.selectable, literal_binds=True),
+    )
+
+
+class View(DDLElement):
+    name: str
+    selectable: Select
+    # table: TableClause = _table()
+
+    @classproperty
+    def table(cls) -> TableClause:
+        t = table_(cls.name)
+        t.columns._populate_separate_keys(
+            col._make_proxy(t) for col in cls.selectable.selected_columns
+        )
+        return t
+    
+
+@compiler.compiles(View)
+def _create_view_compiler(element: View, compiler: PGDDLCompiler, **kwargs) -> str:
+    return "CREATE OR REPLACE VIEW %s AS %s;" % (
         element.name,
         compiler.sql_compiler.process(element.selectable, literal_binds=True),
     )

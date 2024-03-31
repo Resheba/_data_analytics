@@ -8,7 +8,7 @@ from sqlalchemy import inspect, func, select
 
 from src.core import manager, setup_sql, setup_df
 from config import Settings
-from src.database import DataORM, AVGTempDayMaterializedView, AVGTempMonthMaterializedView, SnowDayCoverMaterializedView
+from src.database import DataORM, AVGTempDayMaterializedView, AVGTempMonthView, SnowDayCoverMaterializedView
 
 
 def main() -> None:
@@ -25,29 +25,34 @@ def main() -> None:
         logging.info('Data prepared')
 
     with manager.get_session() as session:
-        logging.info('Refresh materialized views')
+        logging.info('Refresh views')
         session.execute(AVGTempDayMaterializedView())
-        session.execute(AVGTempMonthMaterializedView())
+        session.execute(AVGTempMonthView())
         session.execute(SnowDayCoverMaterializedView())
         session.commit()
-        logging.info('Materialized views refreshed')
+        logging.info('Views refreshed')
 
     logging.info('\n\n\tResults:\n')
+
+    logging.info('AVG Temperature by day')
     print(
         manager(
             manager[AVGTempDayMaterializedView.table].select.limit(5), scalars=False
         )
     )
+    logging.info('AVG Temperature by month')
     print(
         manager(
-            manager[AVGTempMonthMaterializedView.table].select.limit(5), scalars=False
+            manager[AVGTempMonthView.table].select.limit(5), scalars=False
         )
     )
+    logging.info('Days with snow cover')
     print(
         manager(
             select(func.count()).where(SnowDayCoverMaterializedView.table.c.snow_cover != 0)
         )
     )
+    logging.info('')
     
 
 if __name__ == "__main__":

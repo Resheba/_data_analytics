@@ -3,7 +3,7 @@ from sqlalchemy import select, cast, func
 
 from src.core import manager
 
-from ._view import MaterializedView
+from ._view import MaterializedView, View
 
 
 class DataORM(manager.Base):
@@ -67,7 +67,7 @@ class AVGTempDayMaterializedView(MaterializedView):
     )
 
 
-class AVGTempMonthMaterializedView(MaterializedView):
+class AVGTempMonthView(View):
     '''
     SELECT 
         TO_CHAR(datetime, 'YYYY-MM') as date, AVG(data."T") 
@@ -120,3 +120,10 @@ class SnowDayCoverMaterializedView(MaterializedView):
         ).
         group_by('date').
         order_by('date'))
+
+
+class SnowProYearView(View):
+    '''
+
+    '''
+    pass
