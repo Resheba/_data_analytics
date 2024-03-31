@@ -45,7 +45,7 @@ def main() -> None:
     )
     print(
         manager(
-            select(func.count()).where(SnowDayCoverMaterializedView.table.c.snow_cover == 0)
+            select(func.count()).where(SnowDayCoverMaterializedView.table.c.snow_cover != 0)
         )
     )
     
