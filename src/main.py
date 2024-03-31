@@ -53,49 +53,55 @@ def main() -> None:
 
     logger.info('\n\n\tResults:\n')
 
-    logger.info('AVG Temperature by day')
+    logger.info('Средняя температура по дням')
     logger.info('\n' + pformat(
         manager(
             manager[AVGTempDayView.table].select.limit(5), scalars=False
         )
     ))
-    logger.info('AVG Temperature by month')
+    logger.info('Средняя температура по месяцам')
     logger.info('\n' + pformat(
         manager(
             manager[AVGTempMonthView.table].select.limit(5), scalars=False
         )
     ))
-    logger.info('Days with snow cover')
+    logger.info('Количество дней со снежным покровом (всего)')
     logger.info('\n' + pformat(
         manager(
             select(func.count()).where(SnowDayCoverView.table.c.snow_cover != 0)
         )
     ))
-    logger.info('Snow cover by years')
+    logger.info('Количество дней со снежным покровом (погодовой)')
     logger.info('\n' + pformat(
         manager(
             manager[SnowDayProYearView.table].select, scalars=False
         )
     ))
-    logger.info('Max snow cover by seasons')
+    logger.info('Максимальный покров снега по сезонам V2')
     logger.info('\n' + pformat(
         manager(
             manager[MaxSnowCoverSeason2MaterializedView.table].select, scalars=False
         )
     ))
-    logger.info('Days with snow cover by seasons')
+    logger.info('Максимальный покров снега по сезонам V1')
+    logger.info('\n' + pformat(
+        manager(
+            manager[MaxSnowCoverSeason1MaterializedView.table].select, scalars=False
+        )
+    ))
+    logger.info('Количество дней со снежным покровом в сезноны')
     logger.info('\n' + pformat(
         manager(
             manager[DaysWithSnowCoverSeasonMaterializedView.table].select, scalars=False
         )
     ))
-    logger.info('Snow melt J')
+    logger.info('Даты схода (начала убывания уровня снега) Lateral Join')
     logger.info('\n' + pformat(
         manager(
             manager[SnowFallLJMaterializedView.table].select, scalars=False
         )
     ))
-    logger.info('Snow melt WF')
+    logger.info('Даты схода (начала убывания уровня снега) Window Function')
     logger.info('\n' + pformat(
         manager(
             manager[SnowFallWFView.table].select, scalars=False
