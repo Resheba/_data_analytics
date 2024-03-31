@@ -1,1 +1,1 @@
-from .models import DataORM, AVGTempDayMaterializedView, AVGTempMonthView, SnowDayCoverMaterializedView, SnowDayProYearView, MaxSnowCoverSeason_1_View, DaysWithSnowCoverSeasonView
+from .models import DataORM, AVGTempDayMaterializedView, AVGTempMonthView, SnowDayCoverMaterializedView, SnowDayProYearView, MaxSnowCoverSeason1View, MaxSnowCoverSeason2View, DaysWithSnowCoverSeasonView
