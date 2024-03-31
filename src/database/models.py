@@ -202,3 +202,68 @@ class MaxSnowCoverSeason_1_View(View):
             group_by('season').
             order_by('season')
             )
+
+
+class DaysWithSnowCoverSeasonView(View):
+    '''    
+    with seasons as (
+        SELECT DISTINCT EXTRACT(YEAR FROM date) - 1 as year_a, EXTRACT(YEAR FROM date) as year_b
+        FROM snow_cover_mv
+		UNION
+        SELECT DISTINCT EXTRACT(YEAR FROM date) as year_a, EXTRACT(YEAR FROM date) + 1 as year_b
+        FROM snow_cover_mv
+        ORDER BY 
+        year_a
+    )
+
+    SELECT 
+        FORMAT('%s/%s', year_a, year_b) as season, 
+        COUNT(snow_cover) 
+    FROM 
+        seasons, 
+        snow_cover_mv
+    WHERE
+        (EXTRACT(MONTH FROM date) >= 7 AND EXTRACT(YEAR FROM date) = year_a
+        	OR
+        EXTRACT(MONTH FROM date) < 7 AND EXTRACT(YEAR FROM date) = year_b)
+		AND 
+		snow_cover != 0
+		
+    GROUP BY
+        season
+    ORDER BY
+        season
+    '''
+    name: str = 'days_with_snow_season'
+    _snow_covers_aliased = aliased(SnowDayCoverMaterializedView.table)
+    _cte: CTE = (union(
+                    select(
+                        distinct(func.extract('year', _snow_covers_aliased.c.date).op('-')(1)).label('year_a'), 
+                        func.extract('year', _snow_covers_aliased.c.date).label('year_b'),
+                        )
+                        .select_from(_snow_covers_aliased),
+                    select(
+                        distinct(func.extract('year', _snow_covers_aliased.c.date)).label('year_a'), 
+                        func.extract('year', _snow_covers_aliased.c.date).op('+')(1).label('year_b'),
+                        )
+                        .select_from(_snow_covers_aliased)
+                    ).
+                order_by('year_a')
+            ).cte('seasons')
+    selectable: Select = (select(
+            func.format('%s/%s', _cte.c.year_a, _cte.c.year_b).label('season'),
+            func.count(_snow_covers_aliased.c.snow_cover).label('max_snow_cover')).
+            select_from(_cte, _snow_covers_aliased).
+            where(
+                and_(
+                    or_(
+                        and_(func.extract('month', _snow_covers_aliased.c.date) >= 7, func.extract('year' , _snow_covers_aliased.c.date) == _cte.c.year_a),
+                        and_(func.extract('month', _snow_covers_aliased.c.date) < 7, func.extract('year', _snow_covers_aliased.c.date) == _cte.c.year_b)
+                        ),
+                    _snow_covers_aliased.c.snow_cover != 0
+                    )
+                ).
+            group_by('season').
+            order_by('season')
+            )
+    

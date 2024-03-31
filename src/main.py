@@ -8,7 +8,7 @@ from sqlalchemy import inspect, func, select
 
 from config import Settings
 from src.core import manager, setup_sql, setup_df, logger
-from src.database import DataORM, AVGTempDayMaterializedView, AVGTempMonthView, SnowDayCoverMaterializedView, SnowDayProYearView, MaxSnowCoverSeason_1_View
+from src.database import DataORM, AVGTempDayMaterializedView, AVGTempMonthView, SnowDayCoverMaterializedView, SnowDayProYearView, MaxSnowCoverSeason_1_View, DaysWithSnowCoverSeasonView
 
 
 def main() -> None:
@@ -33,6 +33,7 @@ def main() -> None:
         session.execute(SnowDayCoverMaterializedView())
         session.execute(SnowDayProYearView())
         session.execute(MaxSnowCoverSeason_1_View())
+        session.execute(DaysWithSnowCoverSeasonView())
         session.commit()
         logger.info('Views refreshed')
 
@@ -66,6 +67,12 @@ def main() -> None:
     logger.info('\n' + pformat(
         manager(
             manager[MaxSnowCoverSeason_1_View.table].select, scalars=False
+        )
+    ))
+    logger.info('Days with snow cover by seasons')
+    logger.info('\n' + pformat(
+        manager(
+            manager[DaysWithSnowCoverSeasonView.table].select, scalars=False
         )
     ))
     
