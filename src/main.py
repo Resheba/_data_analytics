@@ -23,6 +23,8 @@ def main() -> None:
         logger.info(f'Data from `{Settings.DATA_PATH}` has been prepared')
         setup_sql(df, DataORM.__tablename__, manager.engine)
         logger.info('Data prepared')
+    else:
+        logger.info(f'Table {DataORM.__tablename__} is already exists')
 
     with manager.get_session() as session:
         logger.info('Refresh views')

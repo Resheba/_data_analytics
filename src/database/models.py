@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Numeric, Select, String, Text, TIMESTAMP, SmallInteger, Float, Date, case
-from sqlalchemy import select, cast, func, distinct, CTE, and_, or_
+from sqlalchemy import select, cast, func, distinct, CTE, and_, or_, union
 from sqlalchemy.orm import aliased
 
 from src.core import manager
@@ -149,6 +149,9 @@ class SnowDayProYearView(View):
 class MaxSnowCoverSeason_1_View(View):
     '''
     with seasons as (
+        SELECT DISTINCT EXTRACT(YEAR FROM date) - 1 as year_a, EXTRACT(YEAR FROM date) as year_b
+        FROM snow_cover_mv
+		UNION
         SELECT DISTINCT EXTRACT(YEAR FROM date) as year_a, EXTRACT(YEAR FROM date) + 1 as year_b
         FROM snow_cover_mv
         ORDER BY 
@@ -172,11 +175,18 @@ class MaxSnowCoverSeason_1_View(View):
     '''
     name: str = 'max_snow_cover_season'
     _snow_covers_aliased = aliased(SnowDayCoverMaterializedView.table)
-    _cte: CTE = (select(
-                    distinct(func.extract('year', _snow_covers_aliased.c.date)).label('year_a'), 
-                    func.extract('year', _snow_covers_aliased.c.date).op('+')(1).label('year_b'),
-                )
-                .select_from(_snow_covers_aliased).
+    _cte: CTE = (union(
+                    select(
+                        distinct(func.extract('year', _snow_covers_aliased.c.date).op('-')(1)).label('year_a'), 
+                        func.extract('year', _snow_covers_aliased.c.date).label('year_b'),
+                        )
+                        .select_from(_snow_covers_aliased),
+                    select(
+                        distinct(func.extract('year', _snow_covers_aliased.c.date)).label('year_a'), 
+                        func.extract('year', _snow_covers_aliased.c.date).op('+')(1).label('year_b'),
+                        )
+                        .select_from(_snow_covers_aliased)
+                    ).
                 order_by('year_a')
             ).cte('seasons')
     selectable: Select = (select(
