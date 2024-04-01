@@ -27,6 +27,7 @@ class TestQueries:
         if not inspect(manager.engine).has_table(DataORM.__tablename__):
             if excel_path is None or excel_path is Ellipsis:
                 excel_path = Settings.DATA_PATH
+            logger.info('Reading data...')
             df: DataFrame = read_excel(excel_path)
             logger.info('Table not found. Prepare data')
             logger.info(f'Data from `{excel_path}` has been read')
@@ -53,15 +54,20 @@ class TestQueries:
 
     @classmethod
     def run_all(cls, manager: SyncManager):
-        cls.test_avg_temp_day(manager)
-        cls.test_avg_temp_month(manager)
-        cls.test_snow_day_count(manager)
-        cls.test_snow_day_pro_year(manager)
-        cls.test_max_snow_cover_season_1(manager)
-        cls.test_max_snow_cover_season_2(manager)
-        cls.test_days_with_snow_cover_season(manager)
-        cls.test_snow_fall_window_function(manager)
-        cls.test_snow_fall_lateral_join(manager)
+        logger.info('\n\n\tTests:\n')
+        try:
+            cls.test_avg_temp_day(manager)
+            cls.test_avg_temp_month(manager)
+            cls.test_snow_day_count(manager)
+            cls.test_snow_day_pro_year(manager)
+            cls.test_max_snow_cover_season_1(manager)
+            cls.test_max_snow_cover_season_2(manager)
+            cls.test_days_with_snow_cover_season(manager)
+            cls.test_snow_fall_window_function(manager)
+            cls.test_snow_fall_lateral_join(manager)
+        except Exception as ex:
+            logger.error(ex)
+        logger.info('Exit (For more info check the logs [default root log.log])')
 
     @classmethod
     def test_avg_temp_day(cls, manager: SyncManager):
